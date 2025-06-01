@@ -87,7 +87,88 @@ func handleConnection(conn net.Conn) {
 		}
 
 	}
-	conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello from TCP server!\n"))
+	// conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello from TCP server!\n"))
 	fmt.Println("Headers:", headers)
+	// -------------- Day 2: Ends ----------------
 
+	html := `
+<html>
+	<head><title>Mini Go Server</title></head>
+	<body><h1>Hello from Go!</h1></body>
+</html>
+`
+
+	switch path {
+	case "/":
+		writeResponse(conn, 200, "text/plain", "Welcome to the home page!")
+	case "/about":
+		writeResponse(conn, 200, "text/plain", "This is the about page.")
+	case "/home":
+		writeResponse(conn, 200, "text/plain", "Welcome to the home page!")
+	case "/html":
+		writeResponse(conn, 200, "text/html", html)
+	case "/json":
+		writeResponse(conn, 200, "application/json", `{"message": "Hello from Go!"}`)
+	default:
+		// writeResponse(conn, 404, "text/plain", "Page not found.")
+		serveStaticFile(conn, path)
+	}
+
+}
+
+// -------------- Day 3: Start ----------------
+func writeResponse(conn net.Conn, statusCode int, contentType, body string) {
+	statusText := map[int]string{
+		200: "OK",
+		404: "Not Found",
+		500: "Internal Server Error",
+	}[statusCode]
+
+	if statusText == "" {
+		statusText = "Unknown Status"
+	}
+
+	statusLine := fmt.Sprintf("HTTP/1.1 %d %s\r\n", statusCode, statusText)
+	headers := fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n", contentType, len(body))
+
+	response := statusLine + headers + body
+	_, err := conn.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing response:", err)
+		return
+	}
+	fmt.Println("Response sent:", response)
+}
+
+// -------------- Day 3: Ends ----------------
+
+// -------------- Day 4: Start ----------------
+func serveStaticFile(conn net.Conn, path string) {
+	filePath := "./public" + path
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		writeResponse(conn, 404, "text/plain", "404 - File not found")
+		return
+	}
+	contentType := getContentType(filePath)
+	writeResponse(conn, 200, contentType, string(data))
+}
+
+func getContentType(filePath string) string {
+	switch {
+	case strings.HasSuffix(filePath, ".html"):
+		return "text/html"
+	case strings.HasSuffix(filePath, ".css"):
+		return "text/css"
+	case strings.HasSuffix(filePath, ".js"):
+		return "application/javascript"
+	case strings.HasSuffix(filePath, ".json"):
+		return "application/json"
+	case strings.HasSuffix(filePath, ".png"):
+		return "image/png"
+	case strings.HasSuffix(filePath, ".jpg") || strings.HasSuffix(filePath, ".jpeg"):
+		return "image/jpeg"
+	default:
+		return "application/octet-stream"
+	}
 }
