@@ -30,6 +30,11 @@ func main() {
 	}
 }
 
+var routes = map[string]func(net.Conn){
+	"/api/hello":   handleHello,
+	"/api/goodbye": handleGoodbye,
+}
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -89,6 +94,10 @@ func handleConnection(conn net.Conn) {
 	}
 	// conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello from TCP server!\n"))
 	fmt.Println("Headers:", headers)
+
+	// Handle the request based on the path
+	handleRequest(conn, path)
+
 	// -------------- Day 2: Ends ----------------
 
 	html := `
@@ -171,4 +180,20 @@ func getContentType(filePath string) string {
 	default:
 		return "application/octet-stream"
 	}
+}
+
+func handleRequest(conn net.Conn, path string) {
+	if handler, exists := routes[path]; exists {
+		handler(conn)
+	} else {
+		writeResponse(conn, 404, "text/html", "404 - Not Found")
+	}
+}
+func handleHello(conn net.Conn) {
+	response := "Hello from the /api/hello endpoint!\n"
+	writeResponse(conn, 200, "text/plain", response)
+}
+func handleGoodbye(conn net.Conn) {
+	response := "Goodbye from the /api/goodbye endpoint!\n"
+	writeResponse(conn, 200, "text/plain", response)
 }
